@@ -577,8 +577,8 @@ supabaseKey:"sb_publishable_K6Etra48Jan4o7anW6rYIA_R9Ph43jB",// opsional: URL pe
     st.className="status wait";st.textContent="Menyiapkan data Anda…";
     var done=function(sent){st.className="status ok";st.innerHTML=(sent?"Data Anda berhasil dikirim. ":"Data siap dikirim ke sales. ")+"Lanjutkan lewat WhatsApp agar sales bisa segera membantu.<br>";
       var a=document.createElement("a");a.className="btn btn-w";a.href=wa(msg);a.target="_blank";a.rel="noopener";a.textContent="Buka WhatsApp";st.appendChild(a)};
-    if(CONFIG.formEndpoint){fetch(CONFIG.formEndpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nama:nm,whatsapp:w,kota:$("kt").value,produk:jn.value,nilai:nl.value,pesan:$("ps").value})}).then(function(r){done(r.ok)}).catch(function(){done(false)})}
-    else setTimeout(function(){done(false)},400);
+if(CONFIG.supabaseUrl&&CONFIG.supabaseKey){fetch(CONFIG.supabaseUrl+"/rest/v1/calon_nasabah",{method:"POST",headers:{"Content-Type":"application/json","apikey":CONFIG.supabaseKey,"Prefer":"return=minimal"},body:JSON.stringify({nama:nm,whatsapp:w,kota:$("kt").value,produk:jn.value,nilai:nl.value,pesan:$("ps").value})}).then(function(r){done(r.ok)}).catch(function(){done(false)})}
+else setTimeout(function(){done(false)},400);
   });
 
   (function paintSales(){
