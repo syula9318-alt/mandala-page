@@ -353,7 +353,9 @@ const CONFIG={
   ratePerMonth:null,                        // GANTI: bunga flat per bulan (%) bila sudah resmi; null = belum tersedia
   minAmount:1000000,maxAmount:500000000,
   tenors:[6,12,18,24,36],                   // GANTI sesuai produk resmi
-  formEndpoint:null,                        // opsional: URL penerima data form (backend sendiri)
+  formEndpoint:null,
+  supabaseUrl:"https://zkqfmadldbeqkilfgnmq.supabase.co",
+supabaseKey:"sb_publishable_K6Etra48Jan4o7anW6rYIA_R9Ph43jB",// opsional: URL penerima data form (backend sendiri)
   info:[{label:"Plafon pembiayaan",value:null},{label:"Tenor",value:null},{label:"Bunga / margin",value:null},{label:"Uang muka (DP)",value:null},{label:"Biaya administrasi & lainnya",value:null},{label:"Asuransi",value:null}],
   products:[                                // GANTI dengan produk & deskripsi resmi
     {key:"motor",name:"Pembiayaan Motor",desc:"Solusi pembiayaan kendaraan untuk kebutuhan Anda.",icon:"🏍️",need:"Untuk kebutuhan kendaraan roda dua."},
