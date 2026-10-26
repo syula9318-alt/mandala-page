@@ -326,6 +326,7 @@ dialog h2{font:800 26px var(--f);margin-bottom:6px}
       </div>
       <div class="fld"><label for="nl">Jumlah dana / nilai kendaraan</label><input id="nl" inputmode="numeric" placeholder="Rp"></div>
       <div class="fld"><label for="ps">Pesan</label><textarea id="ps" rows="3"></textarea></div>
+      <div class="fld"><label for="brk">Unggah berkas (opsional)</label><input id="brk" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple><small style="color:var(--muted)">Maksimal 5 berkas, masing-masing 5 MB. Format: JPG, PNG, WEBP, atau PDF. Dengan mengunggah, Anda setuju berkas hanya dipakai sales untuk memproses pengajuan Anda.</small></div>
       <button class="btn btn-y" type="submit" style="width:100%;padding:18px">Hubungi sales</button>
       <div class="status" id="status" role="status" aria-live="polite"></div>
       <p class="note" style="color:var(--muted)">Jangan menuliskan PIN, OTP, atau kata sandi pada form ini. Website ini merupakan media informasi dan konsultasi pribadi sales, bukan situs resmi perusahaan. Informasi pembiayaan, persetujuan, biaya, bunga, tenor, dan persyaratan mengikuti ketentuan resmi Mandala Finance yang berlaku.</p>
@@ -567,6 +568,29 @@ supabaseKey:"sb_publishable_K6Etra48Jan4o7anW6rYIA_R9Ph43jB",// opsional: URL pe
   ten.addEventListener("change",sim);$("simForm").addEventListener("submit",function(e){e.preventDefault();sim()});sim();
 
   /* ---- form lead ---- */
+  async function kirimSupabase(d,files){
+  var st=$("status"),U=CONFIG.supabaseUrl,K=CONFIG.supabaseKey;
+  var tipe={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","application/pdf":"pdf"};
+  files=Array.prototype.slice.call(files||[]);
+  if(files.length>5){st.className="status";st.textContent="Maksimal 5 berkas.";return null}
+  for(var i=0;i<files.length;i++){
+    if(files[i].size>5242880){st.className="status";st.textContent="Berkas "+files[i].name+" lebih dari 5 MB.";return null}
+    if(!tipe[files[i].type]){st.className="status";st.textContent="Format "+files[i].name+" tidak didukung. Pakai JPG, PNG, WEBP, atau PDF.";return null}
+  }
+  var folder=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2);
+  var berkas=[],gagal=[];
+  for(var j=0;j<files.length;j++){
+    var f=files[j],path=folder+"/"+(j+1)+"-"+Date.now()+"."+tipe[f.type];
+    try{
+      var r=await fetch(U+"/storage/v1/object/berkas-prospek/"+path,{method:"POST",headers:{"apikey":K,"Content-Type":f.type,"x-upsert":"false"},body:f});
+      if(r.ok)berkas.push({path:path,nama:f.name,tipe:f.type,ukuran:f.size});else gagal.push(f.name);
+    }catch(e){gagal.push(f.name)}
+  }
+  if(gagal.length)d.pesan=(d.pesan?d.pesan+" ":"")+"[Gagal unggah: "+gagal.join(", ")+"]";
+  d.berkas=berkas;
+  var res=await fetch(U+"/rest/v1/calon_nasabah",{method:"POST",headers:{"Content-Type":"application/json","apikey":K,"Prefer":"return=minimal"},body:JSON.stringify(d)});
+  return res.ok;
+}
   var validWa=function(s){return /^(\+?62|0)8[1-9][0-9]{6,11}$/.test(s.replace(/[\s-]/g,""))};
   $("leadForm").addEventListener("submit",function(e){
     e.preventDefault();var ok=true,nm=$("nm").value.trim(),w=$("wa").value.trim(),st=$("status");
@@ -577,8 +601,7 @@ supabaseKey:"sb_publishable_K6Etra48Jan4o7anW6rYIA_R9Ph43jB",// opsional: URL pe
     st.className="status wait";st.textContent="Menyiapkan data Anda…";
     var done=function(sent){st.className="status ok";st.innerHTML=(sent?"Data Anda berhasil dikirim. ":"Data siap dikirim ke sales. ")+"Lanjutkan lewat WhatsApp agar sales bisa segera membantu.<br>";
       var a=document.createElement("a");a.className="btn btn-w";a.href=wa(msg);a.target="_blank";a.rel="noopener";a.textContent="Buka WhatsApp";st.appendChild(a)};
-if(CONFIG.supabaseUrl&&CONFIG.supabaseKey){fetch(CONFIG.supabaseUrl+"/rest/v1/calon_nasabah",{method:"POST",headers:{"Content-Type":"application/json","apikey":CONFIG.supabaseKey,"Prefer":"return=minimal"},body:JSON.stringify({nama:nm,whatsapp:w,kota:$("kt").value,produk:jn.value,nilai:nl.value,pesan:$("ps").value})}).then(function(r){done(r.ok)}).catch(function(){done(false)})}
-else setTimeout(function(){done(false)},400);
+if(CONFIG.supabaseUrl&&CONFIG.supabaseKey){kirimSupabase({nama:nm,whatsapp:w,kota:$("kt").value,produk:jn.value,nilai:nl.value,pesan:$("ps").value},$("brk").files).then(function(ok2){if(ok2===null)return;done(ok2)}).catch(function(){done(false)})}else setTimeout(function(){done(false)},400);
   });
 
   (function paintSales(){
