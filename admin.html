@@ -11,7 +11,7 @@
 body{margin:0;font-family:system-ui,Arial,sans-serif;background:#f4f6fb;color:#16224a}
 header{background:#f8d200;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
 header h1{margin:0;font-size:18px}
-main{max-width:1100px;margin:20px auto;padding:0 16px}
+main{max-width:1200px;margin:20px auto;padding:0 16px}
 .card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(20,52,107,.1)}
 #loginBox{max-width:360px;margin:60px auto}
 label{display:block;font-size:14px;margin:12px 0 4px}
@@ -28,6 +28,7 @@ th,td{text-align:left;padding:10px 8px;border-bottom:1px solid #e3e7f2;vertical-
 th{font-size:12px;text-transform:uppercase;color:#5a6791}
 .msg{margin-top:10px;font-size:14px;color:#c62828}
 a{color:#14346b;font-weight:600}
+.bk{display:block;margin:0 0 4px;padding:6px 10px;font-size:13px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -57,7 +58,7 @@ a{color:#14346b;font-weight:600}
     <div id="info"></div>
     <div class="wrap">
       <table>
-        <thead><tr><th>Waktu</th><th>Nama</th><th>WhatsApp</th><th>Kota</th><th>Produk</th><th>Nilai</th><th>Pesan</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Waktu</th><th>Nama</th><th>WhatsApp</th><th>Kota</th><th>Produk</th><th>Nilai</th><th>Pesan</th><th>Berkas</th><th>Status</th><th></th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </div>
@@ -69,6 +70,7 @@ a{color:#14346b;font-weight:600}
 var SUPABASE_URL="https://zkqfmadldbeqkilfgnmq.supabase.co";
 var SUPABASE_KEY="sb_publishable_K6Etra48Jan4o7anW6rYIA_R9Ph43jB";
 var sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+var BUCKET="berkas-prospek";
 var STATUS=["Baru","Dihubungi","Proses","Closing","Batal"];
 var allRows=[];
 function $(id){return document.getElementById(id)}
@@ -84,6 +86,9 @@ function waNomor(n){
   var d=String(n||"").replace(/\D/g,"");
   if(d.indexOf("0")===0)d="62"+d.slice(1);
   return d;
+}
+function daftarBerkas(r){
+  return Array.isArray(r.berkas)?r.berkas.filter(function(b){return b&&typeof b.path==="string"}):[];
 }
 
 async function mulai(){
@@ -119,6 +124,13 @@ async function muat(){
   gambar();
 }
 
+async function bukaBerkas(path){
+  var w=window.open("","_blank");
+  var x=await sb.storage.from(BUCKET).createSignedUrl(path,300);
+  if(x.error||!x.data){if(w)w.close();alert("Gagal membuka berkas.");return;}
+  if(w){w.location.href=x.data.signedUrl;}else{location.href=x.data.signedUrl;}
+}
+
 function gambar(){
   var q=$("cari").value.trim().toLowerCase(), f=$("filter").value;
   var rows=allRows.filter(function(r){
@@ -138,6 +150,15 @@ function gambar(){
     a.textContent=r.whatsapp;a.href="https://wa.me/"+waNomor(r.whatsapp);a.target="_blank";a.rel="noopener";
     cw.appendChild(a);
     td(r.kota);td(r.produk);td(r.nilai);td(r.pesan);
+    var cb=td("");
+    daftarBerkas(r).forEach(function(bk){
+      var b2=document.createElement("button");
+      b2.className="ghost bk";
+      b2.textContent="Lihat "+String(bk.nama||"berkas").slice(0,24);
+      b2.onclick=function(){bukaBerkas(bk.path);};
+      cb.appendChild(b2);
+    });
+    if(!cb.firstChild)cb.textContent="-";
     var cs=td("");
     var sel=document.createElement("select");
     var opts=STATUS.indexOf(r.status)>-1?STATUS:STATUS.concat([r.status]);
@@ -161,9 +182,11 @@ async function ubahStatus(id,val,sel){
 }
 
 async function hapus(r){
-  if(!confirm("Hapus data "+r.nama+"? Tindakan ini tidak bisa dibatalkan."))return;
+  var paths=daftarBerkas(r).map(function(b){return b.path});
+  if(!confirm("Hapus data "+r.nama+(paths.length?" beserta "+paths.length+" berkas":"")+"? Tindakan ini tidak bisa dibatalkan."))return;
   var x=await sb.from("calon_nasabah").delete().eq("id",r.id).select();
   if(x.error||!x.data.length){alert("Gagal menghapus data.");return;}
+  if(paths.length){await sb.storage.from(BUCKET).remove(paths);}
   allRows=allRows.filter(function(y){return y.id!==r.id;});
   gambar();
 }
